@@ -1,7 +1,6 @@
 # NavStack - Browser History Simulator
 
-![NavStack Logo](https://drive.google.com/file/d/1A0_Gz5JQbTSwZ8_kw-RiZTHIoeHodNaZ/view?usp=drive_link)
-![React](https://img.shields.io/badge/React-18.2.0-61DAFB?logo=react)
+![NavStack Logo](https://drive.google.com/uc?export=view&id=1A0_Gz5JQbTSwZ8_kw-RiZTHIoeHodNaZ)
 
 An interactive web application that simulates browser navigation history using stack data structures with beautiful visualizations and smooth animations.
 

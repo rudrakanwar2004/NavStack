@@ -247,7 +247,6 @@ npm start
 - **React 18** - Frontend framework
 - **CSS3** - Styling with custom properties
 - **JavaScript ES6+** - Modern JavaScript features
-- **LocalStorage** - Client-side data persistence
 - **CSS Animations** - Smooth transitions and effects
 - **Git** - Version control
 

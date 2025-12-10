@@ -1,4 +1,3 @@
-// Browser.js
 import React, { useState, useEffect } from 'react';
 import Stack from '../utils/Stack';
 import StackVisualization from './StackVisualization';
@@ -9,14 +8,18 @@ import './Browser.css';
 
 const KNOWN_PAGES = ['Home', 'About', 'Products', 'Contact', 'Settings', 'Help'];
 
-const Browser = () => {
+// Update component to accept theme props
+const Browser = ({ theme: initialTheme = 'light', toggleTheme: parentToggleTheme }) => {
   const [backStack, setBackStack] = useState(new Stack());
   const [forwardStack, setForwardStack] = useState(new Stack());
   const [currentPage, setCurrentPage] = useState('Home');
   const [inputUrl, setInputUrl] = useState('');
   const [history, setHistory] = useState(['Home']);
-  const [theme, setTheme] = useState('light');
-
+  
+  // Use parent theme if provided, otherwise local state
+  const [localTheme, setLocalTheme] = useState(initialTheme);
+  const theme = parentToggleTheme ? initialTheme : localTheme;
+  
   const [isChecking, setIsChecking] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
@@ -31,11 +34,15 @@ const Browser = () => {
     bounceClass: inputBounceClass 
   } = useBounceAnimation();
 
-  // Validate a navigation target.
-  // Returns true if the "URL/page" is considered valid (exists or is known).
-  // Handles:
-  //  - internal page names (quick accept)
-  //  - external URLs: tries HEAD fetch with timeout then falls back to an Image ping.
+  // Combined toggle theme function
+  const handleToggleTheme = () => {
+    if (parentToggleTheme) {
+      parentToggleTheme();
+    } else {
+      setLocalTheme(prev => prev === 'light' ? 'dark' : 'light');
+    }
+  };
+
   const validateTarget = async (raw) => {
     const trimmed = raw.trim();
     if (!trimmed) return false;
@@ -47,7 +54,6 @@ const Browser = () => {
     }
 
     // For external-like targets, try to ensure there's actually something there.
-    // Normalize to an https:// prefixed URL for checks.
     let testUrl = trimmed;
     if (!/^https?:\/\//i.test(testUrl)) {
       testUrl = `https://${testUrl}`;
@@ -61,17 +67,13 @@ const Browser = () => {
     try {
       const res = await fetch(testUrl, { method: 'HEAD', mode: 'cors', signal: controller.signal });
       clearTimeout(timer);
-      // If we can get a response and it's OK (<400), consider valid.
       return res.ok;
     } catch (err) {
       clearTimeout(timer);
-      // Network / DNS errors (or CORS/head blocked) -> fallback to image ping
       return await new Promise((resolve) => {
         const img = new Image();
-        // add cache-buster
         img.src = `${testUrl.replace(/\/$/, '')}/favicon.ico?cache=${Date.now()}`;
         const fallbackTimer = setTimeout(() => {
-          // assume failure after timeout
           img.onload = img.onerror = null;
           resolve(false);
         }, timeoutMs);
@@ -88,14 +90,12 @@ const Browser = () => {
     }
   };
 
-  // navigateTo will first validate; only on success we push currentPage to backStack etc.
   const navigateTo = async (url) => {
     if (url.trim() === '' || url === currentPage) {
       triggerBounce();
       return;
     }
 
-    // Prevent multiple parallel checks / navigation attempts
     if (isChecking) return;
     setIsChecking(true);
     setErrorMessage('');
@@ -106,11 +106,10 @@ const Browser = () => {
     if (!ok) {
       setErrorMessage('Invalid URL — page not found or network error.');
       triggerBounce();
-      return; // IMPORTANT: do not push current page onto back stack
+      return;
     }
 
-    // Proceed with normal navigation (we now know the target is valid)
-    // Push current page to back stack
+    // Proceed with normal navigation
     if (currentPage) {
       const newBackStack = new Stack();
       backStack.toArray().forEach(item => newBackStack.push(item));
@@ -118,16 +117,12 @@ const Browser = () => {
       setBackStack(newBackStack);
     }
 
-    // Clear forward stack when navigating to a new page
     const newForwardStack = new Stack();
     setForwardStack(newForwardStack);
 
-    // Trigger page animation
     triggerPageAnimation();
 
-    // Set new current page and update history
     setTimeout(() => {
-      // if it's one of the known internal pages, normalize capitalization
       const normalized = (url && KNOWN_PAGES.includes(url.charAt(0).toUpperCase() + url.slice(1)))
         ? (url.charAt(0).toUpperCase() + url.slice(1))
         : url;
@@ -141,7 +136,6 @@ const Browser = () => {
   const goBack = () => {
     if (backStack.isEmpty()) return;
 
-    // Push current page to forward stack
     if (currentPage) {
       const newForwardStack = new Stack();
       forwardStack.toArray().forEach(item => newForwardStack.push(item));
@@ -149,7 +143,6 @@ const Browser = () => {
       setForwardStack(newForwardStack);
     }
 
-    // Pop from back stack to set new current page
     const previousPage = backStack.pop();
     const newBackStack = new Stack();
     backStack.toArray().forEach(item => newBackStack.push(item));
@@ -165,7 +158,6 @@ const Browser = () => {
   const goForward = () => {
     if (forwardStack.isEmpty()) return;
 
-    // Push current page to back stack
     if (currentPage) {
       const newBackStack = new Stack();
       backStack.toArray().forEach(item => newBackStack.push(item));
@@ -173,7 +165,6 @@ const Browser = () => {
       setBackStack(newBackStack);
     }
 
-    // Pop from forward stack to set new current page
     const nextPage = forwardStack.pop();
     const newForwardStack = new Stack();
     forwardStack.toArray().forEach(item => newForwardStack.push(item));
@@ -199,10 +190,7 @@ const Browser = () => {
     setErrorMessage('');
   };
 
-  const toggleTheme = () => {
-    setTheme(theme === 'light' ? 'dark' : 'light');
-  };
-
+  // Apply theme to body
   useEffect(() => {
     document.body.className = `theme-${theme}`;
   }, [theme]);
@@ -216,7 +204,7 @@ const Browser = () => {
           </h1>
           <button 
             className="theme-toggle"
-            onClick={toggleTheme}
+            onClick={handleToggleTheme}
             aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
           >
             {theme === 'light' ? '🌙' : '☀️'}

@@ -212,3 +212,19 @@
   background-size: 400% 400%;
   animation: gradientShift 15s ease infinite;
 }
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  33% {
+    transform: translateY(-15px) rotate(1deg);
+  }
+  66% {
+    transform: translateY(-8px) rotate(-1deg);
+  }
+}
+
+.float {
+  animation: float 4s ease-in-out infinite;
+}

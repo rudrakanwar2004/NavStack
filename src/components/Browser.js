@@ -77,46 +77,24 @@ const Browser = ({ theme: initialTheme = 'light', toggleTheme: parentToggleTheme
     const trimmed = raw.trim();
     if (!trimmed) return false;
 
-    // If the user typed a known internal page name (e.g., "About"), accept immediately
-    const normalizedCapitalized = trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
+    const normalizedCapitalized =
+      trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
+
     if (KNOWN_PAGES.includes(normalizedCapitalized)) {
       return true;
     }
 
-    // For external-like targets, try to ensure there's actually something there.
-    let testUrl = trimmed;
-    if (!/^https?:\/\//i.test(testUrl)) {
-      testUrl = `https://${testUrl}`;
-    }
-
-    // Try HEAD with timeout
-    const controller = new AbortController();
-    const timeoutMs = 3000;
-    const timer = setTimeout(() => controller.abort(), timeoutMs);
-
     try {
-      const res = await fetch(testUrl, { method: 'HEAD', mode: 'cors', signal: controller.signal });
-      clearTimeout(timer);
-      return res.ok;
-    } catch (err) {
-      clearTimeout(timer);
-      return await new Promise((resolve) => {
-        const img = new Image();
-        img.src = `${testUrl.replace(/\/$/, '')}/favicon.ico?cache=${Date.now()}`;
-        const fallbackTimer = setTimeout(() => {
-          img.onload = img.onerror = null;
-          resolve(false);
-        }, timeoutMs);
-
-        img.onload = () => {
-          clearTimeout(fallbackTimer);
-          resolve(true);
-        };
-        img.onerror = () => {
-          clearTimeout(fallbackTimer);
-          resolve(false);
-        };
+      const res = await fetch('http://localhost:5000/api/validate-url', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: trimmed }),
       });
+
+      const data = await res.json();
+      return data.valid === true;
+    } catch {
+      return false;
     }
   };
 

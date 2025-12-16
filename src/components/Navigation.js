@@ -33,7 +33,7 @@ const Navigation = ({ goBack, goForward, canGoBack, canGoForward, currentPage })
         >
           <span className="button-content">
             <span className="nav-icon">←</span>
-            <span className="nav-text">Back</span>
+            <span className="nav-text">Back / Pop From BackStack</span>
           </span>
         </button>
         
@@ -44,7 +44,7 @@ const Navigation = ({ goBack, goForward, canGoBack, canGoForward, currentPage })
           aria-label="Go forward"
         >
           <span className="button-content">
-            <span className="nav-text">Forward</span>
+            <span className="nav-text">Forward / Pop From ForwardStack</span>
             <span className="nav-icon">→</span>
           </span>
         </button>

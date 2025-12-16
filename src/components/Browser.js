@@ -8,6 +8,36 @@ import './Browser.css';
 
 const KNOWN_PAGES = ['Home', 'About', 'Products', 'Contact', 'Settings', 'Help'];
 
+// Helper function to normalize URL
+const normalizeUrl = (url) => {
+  const trimmed = url.trim();
+  if (!trimmed) return '';
+  
+  // Check if it's a known internal page
+  const normalizedCapitalized = trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
+  if (KNOWN_PAGES.includes(normalizedCapitalized)) {
+    return normalizedCapitalized;
+  }
+  
+  // For external URLs, normalize by adding https:// and removing trailing slashes
+  let normalized = trimmed;
+  if (!/^https?:\/\//i.test(normalized)) {
+    normalized = `https://${normalized}`;
+  }
+  return normalized.replace(/\/$/, '');
+};
+
+// Helper function to check if URL is already in stack
+const isUrlInStack = (url, stack) => {
+  const normalizedTarget = normalizeUrl(url);
+  const stackArray = stack.toArray();
+  
+  return stackArray.some(stackItem => {
+    const normalizedStackItem = normalizeUrl(stackItem);
+    return normalizedStackItem === normalizedTarget;
+  });
+};
+
 // Update component to accept theme props
 const Browser = ({ theme: initialTheme = 'light', toggleTheme: parentToggleTheme }) => {
   const [backStack, setBackStack] = useState(new Stack());
@@ -91,8 +121,25 @@ const Browser = ({ theme: initialTheme = 'light', toggleTheme: parentToggleTheme
   };
 
   const navigateTo = async (url) => {
-    if (url.trim() === '' || url === currentPage) {
+    if (url.trim() === '') {
       triggerBounce();
+      return;
+    }
+
+    // Check if we're navigating to the current page
+    const normalizedCurrent = normalizeUrl(currentPage);
+    const normalizedTarget = normalizeUrl(url);
+    
+    if (normalizedTarget === normalizedCurrent) {
+      triggerBounce();
+      setErrorMessage('Already on this page');
+      return;
+    }
+
+    // Check if the URL is already in the back stack
+    if (isUrlInStack(url, backStack)) {
+      triggerBounce();
+      setErrorMessage('This page is already in your history');
       return;
     }
 
@@ -182,6 +229,12 @@ const Browser = ({ theme: initialTheme = 'light', toggleTheme: parentToggleTheme
     await navigateTo(inputUrl);
   };
 
+  // Quick navigation function that's aware of duplicates
+  const quickNavigate = (page) => {
+    setInputUrl(page);
+    navigateTo(page);
+  };
+
   const clearHistory = () => {
     setBackStack(new Stack());
     setForwardStack(new Stack());
@@ -248,6 +301,23 @@ const Browser = ({ theme: initialTheme = 'light', toggleTheme: parentToggleTheme
           </div>
         )}
 
+        <div className="quick-links">
+          <p className="quick-links-label">Quick Navigation:</p>
+          <div className="quick-links-buttons">
+            {KNOWN_PAGES.map(page => (
+              <button 
+                key={page}
+                onClick={() => quickNavigate(page)}
+                className={`quick-link ${currentPage === page ? 'active' : ''}`}
+                disabled={currentPage === page || isUrlInStack(page, backStack)}
+                title={isUrlInStack(page, backStack) ? "Already in history" : ""}
+              >
+                {page}
+              </button>
+            ))}
+          </div>
+        </div>
+
         <div className="history-controls">
           <button 
             onClick={clearHistory}
@@ -266,7 +336,6 @@ const Browser = ({ theme: initialTheme = 'light', toggleTheme: parentToggleTheme
         <div className={`current-page-container ${pageAnimationClass}`}>
           <PageContent 
             page={currentPage} 
-            history={history}
             isAnimating={isPageAnimating}
           />
         </div>

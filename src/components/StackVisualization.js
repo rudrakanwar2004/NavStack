@@ -84,12 +84,6 @@ const StackVisualization = ({ stack, title, stackType, currentPage }) => {
       </div>
 
       {/* Footer: static labels showing available stack operations (for teaching) */}
-      <div className="stack-footer">
-        <div className="stack-operations">
-          <span className="operation push">PUSH</span>
-          <span className="operation pop">POP</span>
-        </div>
-      </div>
     </div>
   );
 };

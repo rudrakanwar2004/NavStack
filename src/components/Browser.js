@@ -85,7 +85,7 @@ const Browser = ({ theme: initialTheme = 'light', toggleTheme: parentToggleTheme
     }
 
     try {
-      const res = await fetch('http://localhost:5000/api/validate-url', {
+      const res = await fetch('/api/validate-url', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url: trimmed }),

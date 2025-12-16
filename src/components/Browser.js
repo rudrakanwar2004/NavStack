@@ -6,19 +6,41 @@ import PageContent from './PageContent';
 import { useSlideAnimation, useBounceAnimation } from '../hooks/useAnimation';
 import './Browser.css';
 
+/**
+ * Browser component
+ * -----------------
+ * A simple SPA-like browser simulator that supports navigation between
+ * internal "pages" and external URLs. Uses two stack data structures
+ * (backStack and forwardStack) to emulate browser back/forward behavior.
+ *
+ * This file has been annotated with user-facing comments for each function
+ * and important variables. The implementation logic is unchanged — only
+ * comments were added to explain behavior and intent.
+ */
+
+// Known internal pages — used to detect internal navigation vs external URLs.
 const KNOWN_PAGES = ['Home', 'About', 'Products', 'Contact', 'Settings', 'Help'];
 
-// Helper function to normalize URL
+/**
+ * normalizeUrl(url: string) => string
+ * ----------------------------------
+ * Normalizes a user-entered URL or page name for comparison and storage.
+ * - Trims whitespace.
+ * - If the input matches a known internal page (case-insensitive start),
+ *   returns the canonical page name (capitalized).
+ * - For external URLs, ensures the scheme (https://) is present and removes
+ *   any trailing slash for consistent comparison.
+ */
 const normalizeUrl = (url) => {
   const trimmed = url.trim();
   if (!trimmed) return '';
-  
+
   // Check if it's a known internal page
   const normalizedCapitalized = trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
   if (KNOWN_PAGES.includes(normalizedCapitalized)) {
     return normalizedCapitalized;
   }
-  
+
   // For external URLs, normalize by adding https:// and removing trailing slashes
   let normalized = trimmed;
   if (!/^https?:\/\//i.test(normalized)) {
@@ -27,44 +49,82 @@ const normalizeUrl = (url) => {
   return normalized.replace(/\/$/, '');
 };
 
-// Helper function to check if URL is already in stack
+/**
+ * isUrlInStack(url: string, stack: Stack) => boolean
+ * --------------------------------------------------
+ * Utility that checks whether a given URL (or page name) already exists in
+ * the provided stack. It normalizes both the target and each stack item to
+ * make comparisons robust (ignores trailing slash / missing scheme differences).
+ */
 const isUrlInStack = (url, stack) => {
   const normalizedTarget = normalizeUrl(url);
   const stackArray = stack.toArray();
-  
+
   return stackArray.some(stackItem => {
     const normalizedStackItem = normalizeUrl(stackItem);
     return normalizedStackItem === normalizedTarget;
   });
 };
 
-// Update component to accept theme props
+/**
+ * Browser component (React)
+ * -------------------------
+ * parameters or props:
+ *  - theme: initial theme string ('light'|'dark')
+ *  - toggleTheme: optional parent-provided function to toggle theme (if passed,
+ *                 component uses parent theme control)
+ *
+ * State & important variables (brief):
+ *  - backStack / forwardStack: Stack instances used to store navigation history.
+ *  - currentPage: currently visible page (internal page name or external URL).
+ *  - inputUrl: the text the user typed into the address bar.
+ *  - history: simple array of visited pages for debugging/visualization.
+ *  - theme: either controlled by parent (via toggleTheme) or local state.
+ *  - isChecking: boolean that prevents concurrent URL validation calls.
+ *  - errorMessage: UI-friendly error text to show navigation problems.
+ *
+ * Animation hooks are used to add slide/bounce classes when navigating or when
+ * user input requires attention.
+ */
 const Browser = ({ theme: initialTheme = 'light', toggleTheme: parentToggleTheme }) => {
+  // Browser history stacks (LIFO) — wrap plain arrays in Stack utility
   const [backStack, setBackStack] = useState(new Stack());
   const [forwardStack, setForwardStack] = useState(new Stack());
+
+  // Current visible page (starts at 'Home') and the raw input field string
   const [currentPage, setCurrentPage] = useState('Home');
   const [inputUrl, setInputUrl] = useState('');
+
+  // Simple visiting history for UI / debugging purposes
   const [history, setHistory] = useState(['Home']);
-  
-  // Use parent theme if provided, otherwise local state
+
+  // Theme handling: if parent provides toggleTheme, component defers to parent
   const [localTheme, setLocalTheme] = useState(initialTheme);
   const theme = parentToggleTheme ? initialTheme : localTheme;
-  
+
+  // Async validation control + error message shown to user
   const [isChecking, setIsChecking] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
+  // Slide animation hook for page transitions
   const { 
     isAnimating: isPageAnimating, 
     triggerAnimation: triggerPageAnimation, 
     animationClass: pageAnimationClass 
   } = useSlideAnimation();
 
+  // Bounce animation hook for input focus/invalid feedback
   const { 
     triggerBounce, 
     bounceClass: inputBounceClass 
   } = useBounceAnimation();
 
-  // Combined toggle theme function
+  /**
+   * handleToggleTheme()
+   * --------------------
+   * Toggles the theme. If a parent toggle function was provided, delegate to it;
+   * otherwise, flip localTheme state.
+   */
   const handleToggleTheme = () => {
     if (parentToggleTheme) {
       parentToggleTheme();
@@ -73,6 +133,18 @@ const Browser = ({ theme: initialTheme = 'light', toggleTheme: parentToggleTheme
     }
   };
 
+  /**
+   * validateTarget(raw: string) => Promise<boolean>
+   * -----------------------------------------------
+   * Validates whether the provided input is a valid navigation target.
+   * - Immediately accepts known internal pages.
+   * - Otherwise posts the raw value to a backend endpoint '/api/validate-url'
+   *   which should return { valid: true } for reachable/existing URLs.
+   * - Returns false when the server call fails or returns invalid.
+   *
+   * Please note that isChecking state in the component protects against duplicate
+   * validation requests triggered in rapid succession.
+   */
   const validateTarget = async (raw) => {
     const trimmed = raw.trim();
     if (!trimmed) return false;
@@ -98,30 +170,45 @@ const Browser = ({ theme: initialTheme = 'light', toggleTheme: parentToggleTheme
     }
   };
 
+  /**
+   * navigateTo(url: string) => Promise<void>
+   * ----------------------------------------
+   * Main navigation routine invoked when the user submits an address.
+   * Responsibilities:
+   *  - basic input validation (empty, duplicate/current page, already-in-backstack)
+   *  - call validateTarget to confirm the target exists
+   *  - push the current page onto the backStack
+   *  - clear forwardStack (new navigation invalidates forward history)
+   *  - trigger page animation then update the current page
+   *
+   * Important: this function uses Stack.clone-like behavior by creating new
+   * Stack instances when updating state — that keeps React state immutable
+   * (i.e., replacing the stacks rather than mutating shared references).
+   */
   const navigateTo = async (url) => {
     if (url.trim() === '') {
       triggerBounce();
       return;
     }
 
-    // Check if we're navigating to the current page
+    // Prevent navigating to the same normalized page/URL
     const normalizedCurrent = normalizeUrl(currentPage);
     const normalizedTarget = normalizeUrl(url);
-    
+
     if (normalizedTarget === normalizedCurrent) {
       triggerBounce();
       setErrorMessage('Already on this page');
       return;
     }
 
-    // Check if the URL is already in the back stack
+    // Prevent duplicate entries in the back stack
     if (isUrlInStack(url, backStack)) {
       triggerBounce();
       setErrorMessage('This page is already in your history');
       return;
     }
 
-    if (isChecking) return;
+    if (isChecking) return; // avoid concurrent validation calls
     setIsChecking(true);
     setErrorMessage('');
 
@@ -134,7 +221,7 @@ const Browser = ({ theme: initialTheme = 'light', toggleTheme: parentToggleTheme
       return;
     }
 
-    // Proceed with normal navigation
+    // Push current page onto back stack (if any), using a fresh Stack instance
     if (currentPage) {
       const newBackStack = new Stack();
       backStack.toArray().forEach(item => newBackStack.push(item));
@@ -142,9 +229,11 @@ const Browser = ({ theme: initialTheme = 'light', toggleTheme: parentToggleTheme
       setBackStack(newBackStack);
     }
 
+    // Clear forward stack because we are branching into a new navigation path
     const newForwardStack = new Stack();
     setForwardStack(newForwardStack);
 
+    // Trigger the page slide animation and then update current page after delay
     triggerPageAnimation();
 
     setTimeout(() => {
@@ -155,9 +244,18 @@ const Browser = ({ theme: initialTheme = 'light', toggleTheme: parentToggleTheme
       setHistory(prev => [...prev, normalized]);
     }, 150);
 
+    // Reset the address bar input after successful navigation
     setInputUrl('');
   };
 
+  /**
+   * goBack()
+   * --------
+   * Simulates the browser "Back" button:
+   *  - Moves currentPage into the forwardStack
+   *  - Pops the last item from backStack and sets it as currentPage
+   *  - Preserves immutability by creating new Stack instances for state
+   */
   const goBack = () => {
     if (backStack.isEmpty()) return;
 
@@ -180,6 +278,13 @@ const Browser = ({ theme: initialTheme = 'light', toggleTheme: parentToggleTheme
     }, 150);
   };
 
+  /**
+   * goForward()
+   * -----------
+   * Simulates the browser "Forward" button:
+   *  - Pushes the current page onto the backStack
+   *  - Pops the next page from forwardStack and navigates to it
+   */
   const goForward = () => {
     if (forwardStack.isEmpty()) return;
 
@@ -202,17 +307,35 @@ const Browser = ({ theme: initialTheme = 'light', toggleTheme: parentToggleTheme
     }, 150);
   };
 
+  /**
+   * handleSubmit(e)
+   * ----------------
+   * Form submit handler for the address bar — prevents default and delegates
+   * to navigateTo with the current inputUrl value.
+   */
   const handleSubmit = async (e) => {
     e.preventDefault();
     await navigateTo(inputUrl);
   };
 
-  // Quick navigation function that's aware of duplicates
+  /**
+   * quickNavigate(page: string)
+   * ---------------------------
+   * Convenience method used by UI elements to quickly navigate to a known
+   * page. Sets input field and triggers navigation — navigation routine will
+   * still perform validation and duplicate checks.
+   */
   const quickNavigate = (page) => {
     setInputUrl(page);
     navigateTo(page);
   };
 
+  /**
+   * clearHistory()
+   * ----------------
+   * Resets back/forward stacks, resets history tracker and navigates back to
+   * the Home page. Clears any visible error messages too.
+   */
   const clearHistory = () => {
     setBackStack(new Stack());
     setForwardStack(new Stack());
@@ -221,7 +344,7 @@ const Browser = ({ theme: initialTheme = 'light', toggleTheme: parentToggleTheme
     setErrorMessage('');
   };
 
-  // Apply theme to body
+  // Apply selected theme to the document body so CSS can respond to .theme-* classes
   useEffect(() => {
     document.body.className = `theme-${theme}`;
   }, [theme]);

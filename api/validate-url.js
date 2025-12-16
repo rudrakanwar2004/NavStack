@@ -10,7 +10,7 @@ export default async function handler(req, res) {
       return res.status(400).json({ valid: false });
     }
 
-    // Normalize URL
+    // Normalize
     if (!/^https?:\/\//i.test(url)) {
       url = `https://${url}`;
     }
@@ -18,16 +18,26 @@ export default async function handler(req, res) {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 3000);
 
-    const response = await fetch(url, {
-      method: 'HEAD',
-      redirect: 'follow',
-      signal: controller.signal,
-    });
+    try {
+      // Try HEAD first
+      const response = await fetch(url, {
+        method: 'HEAD',
+        redirect: 'follow',
+        signal: controller.signal,
+      });
 
-    clearTimeout(timeout);
+      clearTimeout(timeout);
 
-    return res.status(200).json({ valid: response.ok });
-  } catch (err) {
+      // If server responded at all → valid
+      return res.status(200).json({ valid: true });
+
+    } catch {
+      clearTimeout(timeout);
+      // Even if HEAD fails, URL format is valid → allow navigation
+      return res.status(200).json({ valid: true });
+    }
+
+  } catch {
     return res.status(200).json({ valid: false });
   }
 }

@@ -1,7 +1,6 @@
 /*
   Simple Stack implementation used by the browser simulator.
-  - items: internal array storing stack elements.
-  - Methods are intentionally clear and small so students can follow easily.
+  - items: internal array storing stack elements(url elements).
 */
 class Stack {
   constructor() {

@@ -145,15 +145,27 @@ const Browser = ({ theme: initialTheme = 'light', toggleTheme: parentToggleTheme
    * Please note that isChecking state in the component protects against duplicate
    * validation requests triggered in rapid succession.
    */
+  
   const validateTarget = async (raw) => {
-    const trimmed = raw.trim();
+    const trimmed = (raw || '').trim();
     if (!trimmed) return false;
 
     const normalizedCapitalized =
       trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
-
     if (KNOWN_PAGES.includes(normalizedCapitalized)) {
       return true;
+    }
+
+    // Do quick client-side format validation before hitting the server
+    let candidate = trimmed;
+    if (!/^https?:\/\//i.test(candidate)) candidate = `https://${candidate}`;
+
+    try {
+      // validate URL syntax locally (avoids unnecessary server calls)
+      new URL(candidate);
+    } catch {
+      // invalid URL format -> reject immediately
+      return false;
     }
 
     try {
@@ -162,13 +174,14 @@ const Browser = ({ theme: initialTheme = 'light', toggleTheme: parentToggleTheme
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url: trimmed }),
       });
-
       const data = await res.json();
-      return data.valid === true;
+      return data && data.valid === true;
     } catch {
+      // If server call fails, treat as invalid (safer than accepting)
       return false;
     }
   };
+
 
   /**
    * navigateTo(url: string) => Promise<void>

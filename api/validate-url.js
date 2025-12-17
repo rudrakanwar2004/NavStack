@@ -1,3 +1,4 @@
+// api/validate-url.js
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ valid: false });
@@ -10,34 +11,64 @@ export default async function handler(req, res) {
       return res.status(400).json({ valid: false });
     }
 
-    // Normalize
+    // Normalize and validate URL format
     if (!/^https?:\/\//i.test(url)) {
       url = `https://${url}`;
     }
 
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 3000);
-
     try {
-      // Try HEAD first
-      const response = await fetch(url, {
-        method: 'HEAD',
-        redirect: 'follow',
-        signal: controller.signal,
-      });
-
-      clearTimeout(timeout);
-
-      // If server responded at all → valid
-      return res.status(200).json({ valid: true });
-
+      // Ensure the string is a valid URL
+      new URL(url);
     } catch {
-      clearTimeout(timeout);
-      // Even if HEAD fails, URL format is valid → allow navigation
-      return res.status(200).json({ valid: true });
+      return res.status(200).json({ valid: false });
     }
 
-  } catch {
+    const timeoutMs = 3000;
+    const tryFetch = async (method) => {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+      try {
+        const response = await fetch(url, {
+          method,
+          redirect: 'follow',
+          signal: controller.signal,
+          // Add a simple UA to improve chances (some sites reject unknown UA)
+          headers: { 'User-Agent': 'NavStackValidator/1.0' },
+        });
+        clearTimeout(timer);
+        return response;
+      } catch (err) {
+        clearTimeout(timer);
+        throw err;
+      }
+    };
+
+    // Try HEAD first
+    try {
+      const headRes = await tryFetch('HEAD');
+      if (headRes && headRes.status < 400) {
+        return res.status(200).json({ valid: true });
+      }
+      // If HEAD returned 4xx/5xx, treat as unreachable and proceed to GET fallback
+    } catch (headErr) {
+      // HEAD failed — we'll try GET below
+    }
+
+    // Fallback: GET (some servers don't allow HEAD)
+    try {
+      const getRes = await tryFetch('GET');
+      if (getRes && getRes.status < 400) {
+        return res.status(200).json({ valid: true });
+      } else {
+        return res.status(200).json({ valid: false });
+      }
+    } catch (getErr) {
+      // GET failed too — treat as unreachable
+      return res.status(200).json({ valid: false });
+    }
+
+  } catch (err) {
     return res.status(200).json({ valid: false });
   }
 }

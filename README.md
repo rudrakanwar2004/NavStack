@@ -1,319 +1,320 @@
-# NavStack - Browser History Simulator
+# 🌐 NavStack – Browser History Simulator
 
-![NavStack Logo](https://drive.google.com/uc?export=view&id=1A0_Gz5JQbTSwZ8_kw-RiZTHIoeHodNaZ)
+![NavStack Logo](https://drive.google.com/uc?export=view\&id=1A0_Gz5JQbTSwZ8_kw-RiZTHIoeHodNaZ)
 
-An interactive web application that simulates browser navigation history using stack data structures with beautiful visualizations and smooth animations.
+An interactive web application that **accurately simulates browser navigation history** using stack data structures, complete with real-time visualizations and smooth animations.
+
+---
 
 ## 🎯 Project Overview
 
-NavStack demonstrates how web browsers use stack data structures to manage navigation history. The application provides a visual representation of the LIFO (Last-In-First-Out) principle with interactive components that show how pages are pushed onto and popped from the back and forward stacks.
+Modern browsers manage navigation history using **two stacks**:
 
-## 🏗️ Architecture Overview
+* **Back Stack** – pages previously visited
+* **Forward Stack** – pages available for forward navigation
+
+**NavStack** visualizes this behavior in real time, allowing users to:
+
+* Navigate between internal pages and external URLs
+* Observe push/pop operations on both stacks
+* Understand **real browser behavior**, including restricted and blocked websites
+
+> 🔑 This project focuses on **browser-accurate semantics**, not naive URL reachability checks.
+
+---
+
+## 🏗️ Architecture (CRA + Vercel Serverless)
 
 ```
 NavStack/
 │
 ├── api/
-│   └── validate-url.js          # Serverless backend (Vercel function)
-├── src/
-│   ├── components/
-│   │   ├── WelcomePage.js          # Welcome screen with team introduction
-│   │   ├── Browser.js              # Main browser simulation component
-│   │   ├── StackVisualization.js   # Visual stack representation
-│   │   ├── Navigation.js           # Back/Forward navigation controls
-│   │   ├── PageContent.js          # Dynamic page content display
-│   │   └── WelcomePage.css         # Welcome page styles
-│   ├── utils/
-│   │   └── Stack.js                # Custom stack implementation
-│   ├── hooks/
-│   │   └── useAnimation.js         # Custom animation hooks
-│   ├── styles/
-│   │   ├── animations.css          # Animation keyframes and classes
-│   │   └── themes.css              # Light/dark theme variables
-│   ├── App.js                      # Main app component
-│   └── index.js                    # Entry point
+│   └── validate-url.js        # Vercel Serverless Function
+│
+├── client/                   # Create React App (Frontend)
+│   │
+│   ├── public/
+│   │
+│   ├── src/
+│   │   ├── components/
+│   │   │   ├── Browser.js              # Core browser simulator
+│   │   │   ├── Navigation.js           # Back / Forward controls
+│   │   │   ├── PageContent.js          # Page rendering
+│   │   │   └── StackVisualization.js   # Stack UI
+│   │   │
+│   │   ├── hooks/
+│   │   │   └── useAnimation.js         # Slide / Bounce animations
+│   │   │
+│   │   ├── utils/
+│   │   │   └── Stack.js                # Custom Stack implementation
+│   │   │
+│   │   ├── App.js
+│   │   └── index.js
+│   │
+│   ├── package.json           # CRA config (proxy for local dev)
+│   └── node_modules/
+│
+└── README.md
 ```
+
+---
+
+## 🔁 Runtime Request Flow (Production)
+
+```
+Browser.js (React)
+   ↓ fetch('/api/validate-url')
+Vercel Serverless Function
+   ↓
+External Website
+```
+
+---
 
 ## 👥 Team Roles & Contributions
 
-### **Rudra Kanwar** - Project Lead 
+### 👨‍💻 **Rudra Kanwar** — Project Lead & Frontend Architect
 
-**Responsibilities & Contributions:**
+**Key Contributions:**
 
-* ✅ Led overall project architecture, repo structure, and feature planning.
-* ✅ Designed and implemented the **core stack data structure** (`src/utils/Stack.js`) used for back/forward history.
-* ✅ Implemented the **Browser** component (`src/components/Browser.js`) including navigation logic (navigate, goBack, goForward), input handling, history persistence, and UI state management.
-* ✅ Coordinated component integration (Navigation, PageContent, StackVisualization) and managed inter-component state flows and props.
-* ✅ Implemented frontend-side **URL normalization** and UI UX for validation states (loading/`Checking…`, error banners and dismissible alerts).
-* ✅ Wrote production-ready deployment steps and prepared the project for Vercel serverless deployment (migrated backend validation to `/api/validate-url`).
+* Designed the **overall system architecture**
+* Implemented the **custom Stack data structure**
+* Built the **Browser simulator core logic**:
 
+  * `navigate`
+  * `goBack`
+  * `goForward`
+* Defined **browser-accurate navigation rules**
+* Implemented URL normalization, history checks, and UX states
+* Integrated animations and validation feedback
+* Migrated backend logic to **Vercel serverless API**
 
-### **Ambarish Maji** - UI/UX Designer
-
-**Responsibilities:**
-
-* ✅ Logo design and website identity
-* ✅ Color scheme and visual design suggestions
-
-### **Sohail Khan & Ragini Kanojia** - Backend & Validation Team
-
-**Responsibilities:**
-
-* ✅ Designed and implemented the **URL validation** backend logic.
-* ✅ Implemented input sanitization and error handling for validation endpoints.
 ---
 
-## 🧩 Component Details
+### 🎨 **Ambarish Maji** — UI / UX Designer
 
-### 1. **Stack.js** - Core Data Structure
+* Logo design and branding
+* Color scheme suggestions
+* UI layout
 
-**Purpose:** Implements the stack data structure used for history management
-**Why it's needed:** Provides the fundamental LIFO operations for browser history
-**How it helps:**
+---
 
-* Encapsulates stack operations (push, pop, peek)
-* Maintains state of navigation history
-* Enables clean separation of data logic from UI
+### 🛠️ **Sohail Khan & Ragini Kanojia** — Backend & Validation Logic
 
-```javascript
-// Key Operations:
-push(page)    // Add page to stack
-pop()         // Remove and return top page
-peek()        // View top page without removal
-isEmpty()     // Check if stack is empty
-toArray()     // Convert stack to array for visualization
+* Designed URL validation semantics
+* Implemented `/api/validate-url`
+* Handled real-world edge cases:
+
+  * HTTP 403 / 404
+  * Bot-blocked websites
+  * DNS failures
+  * Timeouts
+
+---
+
+## 🧩 Component Breakdown
+
+### 1️⃣ `Stack.js` — Core Data Structure
+
+Implements a clean **LIFO stack abstraction**.
+
+```js
+push(item)
+pop()
+peek()
+isEmpty()
+toArray()
 ```
 
-### 2. **Browser.js** - Main Application Component
+✔ Encapsulated logic
+✔ Used for both back and forward stacks
 
-**Purpose:** Orchestrates the entire browser simulation
-**Why it's needed:** Central controller managing all navigation logic and state
-**How it helps:**
+---
 
-* Manages backStack and forwardStack states
-* Handles user navigation requests
-* Coordinates between all other components
-* Implements theme switching
+### 2️⃣ `Browser.js` — Core Simulator
 
-**Key Features:**
+The **heart of NavStack**.
 
-* Navigation with URL validation
-* Stack operations visualization
-* Theme persistence
-* Error state management
+Responsibilities:
 
-### 3. **StackVisualization.js** - Visual Stack Display
+* Maintains `backStack` and `forwardStack`
+* Enforces navigation rules
+* Decides **when navigation should be allowed**
+* Coordinates animations and error feedback
 
-**Purpose:** Provides visual representation of stack operations
-**Why it's needed:** Helps users understand how stack operations work visually
-**How it helps:**
+---
 
-* Animates push/pop operations
-* Highlights current and top items
-* Shows stack depth and contents
-* Differentiates between back and forward stacks
+### 3️⃣ `StackVisualization.js`
 
-**Visual Elements:**
+* Visualizes stack operations
+* Highlights top elements
+* Shows real-time depth changes
 
-* Stack items with depth indicators
-* Top element highlighting
-* Animation for stack changes
-* Size and operation indicators
+---
 
-### 4. **Navigation.js** - Control Panel
+### 4️⃣ `Navigation.js`
 
-**Purpose:** Provides back/forward navigation controls
-**Why it's needed:** Mimics real browser navigation interface
-**How it helps:**
+* Back / Forward controls
+* Disabled states when stacks are empty
+* Mimics real browser navigation buttons
 
-* Disabled states based on stack emptiness
-* Visual feedback on interactions
-* Current page display
-* Accessible navigation controls
+---
 
-### 5. **PageContent.js** - Dynamic Content Display
+### 5️⃣ `PageContent.js`
 
-**Purpose:** Shows content for current page with animations
-**Why it's needed:** Provides context for navigation changes
-**How it helps:**
+* Displays current page
+* Handles animated transitions
+* Represents restricted or unreachable pages visually
 
-* Smooth page transition animations
-* Breadcrumb navigation history
-* Page-specific content and features
-* Loading states and metadata
+---
 
-### 6. **WelcomePage.js** - Introduction Screen
+### 6️⃣ `useAnimation.js`
 
-**Purpose:** Team introduction and application launch point
-**Why it's needed:** Sets context and provides team attribution
-**How it helps:**
-
-* Professional first impression
-* Team member showcase
-* Theme toggle access
-* Smooth entry to main application
-
-### 7. **useAnimation.js** - Custom React Hooks
-
-**Purpose:** Provides reusable animation logic
-**Why it's needed:** Centralized animation management
-**How it helps:**
+Custom hooks providing:
 
 * Slide animations for page transitions
-* Bounce effects for user feedback
-* Pulse animations for attention
-* Consistent timing across components
+* Bounce animations for invalid actions
 
-### 8. **themes.css & animations.css** - Styling System
+---
 
-**Purpose:** Centralized styling and animation definitions
-**Why it's needed:** Consistent design system across application
-**How it helps:**
+## 🌐 URL Validation Logic (Browser-Accurate)
 
-* Light/dark theme variables
-* Reusable animation keyframes
-* Consistent spacing and colors
-* Responsive design foundations
+Validation is handled **server-side** via:
 
-## 🔄 Workflow Process
-
-### Navigation Flow:
-
-```
-1. User enters URL → URL validation kicks in
-2. Valid URL → Current page pushed to backStack
-3. ForwardStack cleared (new navigation)
-4. New page set as current → Stack visualization updates
-5. Animation triggers for smooth transition
+```http
+POST /api/validate-url
 ```
 
-### Back/Forward Flow:
+### Interpretation Rules
 
-```
-Back Action:
-1. Current page pushed to forwardStack
-2. Top item popped from backStack
-3. Popped item becomes current page
-4. Both stacks update visualization
+| Condition      | Interpretation             |
+| -------------- | -------------------------- |
+| HTTP < 400     | Page exists                |
+| HTTP 401 / 403 | Site exists but restricted |
+| HTTP 404       | Page exists but not found  |
+| Bot-blocked    | Site exists                |
+| DNS failure    | Invalid                    |
+| Timeout        | Invalid                    |
 
-Forward Action:
-1. Current page pushed to backStack
-2. Top item popped from forwardStack
-3. Popped item becomes current page
-4. Both stacks update visualization
-```
+> ⚠️ Many modern sites (e.g. `x.com`, `chatgpt.com`) block server-side requests but load perfectly in browsers.
+
+NavStack **correctly allows navigation** in such cases.
+
+---
 
 ## 🎨 Design System
 
-### Color Themes:
+### Themes
 
-* **Light Theme:** Professional blue gradient with clean whites
-* **Dark Theme:** Deep navy with vibrant accent colors
+* 🌞 **Light Theme** – clean and professional
+* 🌙 **Dark Theme** – high contrast, modern look
 
-### Animations:
+### Animations
 
-* **Page Transitions:** Slide effects for navigation
-* **Stack Operations:** Smooth push/pop animations
-* **Interactive Elements:** Hover and focus states
-* **Loading States:** Shimmer and pulse effects
+* Slide transitions during navigation
+* Bounce feedback for invalid actions
+* Smooth stack update animations
 
-### Typography:
+---
 
-* **Primary Font:** Inter for modern readability
-* **Hierarchy:** Clear heading sizes for information architecture
-* **Accessibility:** High contrast ratios for readability
+## 🚀 Getting Started (Local Development)
 
-## 🔧 Technical Implementation
-
-### Stack Management:
-
-```javascript
-// Two-stack approach for browser history
-backStack: Stack    // History of visited pages
-forwardStack: Stack // Pages available for forward navigation
-```
-
-### URL Validation:
-
-1. **Internal Pages:** Quick name matching
-2. **External URLs:** Network validation with serverless function
-3. **Error Handling:** User-friendly error messages
-4. **Security:** Input sanitization and safe navigation
-
-### State Persistence:
-
-* Theme preference saved to localStorage
-* Browser history persistence
-* Session restoration on reload
-
-## 🚀 Getting Started
-
-### Installation:
+### 1️⃣ Clone Repository
 
 ```bash
-# Clone the repository
 git clone https://github.com/yourusername/navstack.git
-
-# Install dependencies
 cd navstack
-npm install
+```
 
-# Start development server
+### 2️⃣ Install Dependencies
+
+```bash
+cd client
+npm install
+```
+
+### 3️⃣ Start Frontend
+
+```bash
 npm start
 ```
 
-## 📱 Features
+Frontend runs at:
 
-### Core Features:
+```
+http://localhost:3000
+```
 
-* ✅ Visual stack data structure demonstration
-* ✅ Real-time navigation simulation
-* ✅ Light/dark theme switching
-* ✅ Smooth animations and transitions
-* ✅ URL validation and error handling
-* ✅ History persistence across sessions
+> During local development, CRA proxies `/api/validate-url`.
 
-### Educational Value:
+---
 
-* Demonstrates LIFO (Last-In-First-Out) principle
-* Interactive learning experience
+## 🌍 Deployment (Vercel)
+
+* Frontend: **Create React App**
+* Backend: **Vercel Serverless Function**
+* No Express server required
+
+```bash
+vercel
+```
+
+✔ `/api/validate-url` automatically deployed
+✔ `/client/build` served as frontend
+
+---
 
 ## 🛠️ Technologies Used
 
-* **React 18** - Frontend framework
-* **CSS3** - Styling with custom properties
-* **JavaScript ES6+** - Modern JavaScript features
-* **CSS Animations** - Smooth transitions and effects
-* **Git** - Version control
+* **React (CRA)** – Frontend
+* **Vercel Serverless Functions** – Backend
+* **Custom Stack DS** – Core logic
+* **CSS Animations** – UI transitions
+* **JavaScript (ES6+)**
 
-## 🔒 Security Features
+---
 
-* Input sanitization for URLs
-* Secure localStorage usage
+## 🔒 Security & Safety
+
+* URL sanitization
+* Timeout-limited network requests
+* No client-side external website fetches
+
+---
 
 ## 📈 Future Enhancements
 
-* [ ] Advanced stack operations (merge, search)
-* [ ] User accounts for history sync
-* [ ] Export/import history functionality
-* [ ] Safe network request handling
 * [ ] Browser extension version
+* [ ] History export/import
+* [ ] Advanced stack operations
 * [ ] Multi-language support
-* [ ] XSS prevention measures
+* [ ] Error-state visual classification
+
+---
+
+## 🧠 Key Takeaway
+
+> **Navigation validity ≠ fetch success**
+
+NavStack accurately models **how real browsers behave**, not how bots or scrapers behave.
+
+This makes it a **strong educational, system-design, and data-structure project**.
+
+---
 
 ## 🤝 Contributing
 
 1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit changes (`git commit -m 'Add AmazingFeature'`)
-4. Push to branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
+2. Create a feature branch
+3. Commit your changes
+4. Open a Pull Request
+
+---
 
 ## 🙏 Acknowledgments
 
-* Inspired by browser navigation mechanics
-* Built for educational purposes
-* Special thanks to the entire development team
-* Community feedback and contributions
+* Inspired by real browser internals
+* Built for learning and demonstration
+* Thanks to the entire NavStack team
 
 ---

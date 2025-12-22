@@ -35,19 +35,29 @@ const normalizeUrl = (url) => {
   const trimmed = url.trim();
   if (!trimmed) return '';
 
-  // Check if it's a known internal page
-  const normalizedCapitalized = trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
+  // Internal pages (case-insensitive)
+  const normalizedCapitalized =
+    trimmed.charAt(0).toUpperCase() + trimmed.slice(1).toLowerCase();
+
   if (KNOWN_PAGES.includes(normalizedCapitalized)) {
     return normalizedCapitalized;
   }
 
-  // For external URLs, normalize by adding https:// and removing trailing slashes
-  let normalized = trimmed;
+  // External URLs
+  let normalized = trimmed.toLowerCase(); // 🔥 KEY FIX
+
   if (!/^https?:\/\//i.test(normalized)) {
     normalized = `https://${normalized}`;
   }
-  return normalized.replace(/\/$/, '');
+
+  try {
+    const u = new URL(normalized);
+    return `${u.protocol}//${u.hostname}${u.pathname.replace(/\/$/, '')}`;
+  } catch {
+    return normalized.replace(/\/$/, '');
+  }
 };
+
 
 /**
  * isUrlInStack(url: string, stack: Stack) => boolean
@@ -142,35 +152,50 @@ const Browser = ({ theme: initialTheme = 'light', toggleTheme: parentToggleTheme
    *   which should return { valid: true } for reachable/existing URLs.
    * - Returns false when the server call fails or returns invalid.
    */
-  const validateTarget = async (raw) => {
-    const trimmed = raw.trim();
-    if (!trimmed) return false;
+const validateTarget = async (raw) => {
+  const trimmed = raw.trim();
+  if (!trimmed) return false;
 
-    const normalizedCapitalized =
-      trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
+  const normalizedCapitalized =
+    trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
 
-    if (KNOWN_PAGES.includes(normalizedCapitalized)) {
+  // Internal pages always allowed
+  if (KNOWN_PAGES.includes(normalizedCapitalized)) {
+    setErrorMessage('');
+    return true;
+  }
+
+  try {
+    const res = await fetch('/api/validate-url', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: trimmed }),
+    });
+
+    const data = await res.json();
+
+    // ✅ ONLY DNS-VALID URLs ALLOWED
+    if (data.valid === true) {
+      setErrorMessage('');
       return true;
     }
 
-    try {
-      const res = await fetch('/api/validate-url', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: trimmed }),
-      });
-
-      const data = await res.json();
-      if (data.valid === true) {
-        return true; // valid URL or known page
-      }
-      if (data.reason === 'HTTP_4XX') {
-        return true; // allow navigation to pages that exist but return client/server errors
-      }
-    } catch {
+    // ❌ DNS does not exist → block
+    if (data.reason === 'DNS_NOT_FOUND') {
+      setErrorMessage('Domain does not exist (DNS lookup failed).');
       return false;
     }
-  };
+
+    // ❌ Any other invalid case
+    setErrorMessage('Invalid URL or network error.');
+    return false;
+
+  } catch {
+    setErrorMessage('Validation service unavailable.');
+    return false;
+  }
+};
+
 
   /**
    * navigateTo(url: string) => Promise<void>

@@ -28,13 +28,9 @@ Modern browsers manage navigation history using **two stacks**:
 ```
 NavStack/
 │
-├── api/
-│   └── validate-url.js        # Vercel Serverless Function
-│
-├── client/                   # Create React App (Frontend)
+├── client/                     ← React (Create React App)
 │   │
 │   ├── public/
-│   │
 │   ├── src/
 │   │   ├── components/
 │   │   │   ├── Browser.js              # Core browser simulator
@@ -43,15 +39,87 @@ NavStack/
 │   │   │   └── StackVisualization.js   # Stack UI
 │   │   │
 │   │   ├── hooks/
-│   │   │   └── useAnimation.js         # Slide / Bounce animations
+│   │   │   └── useAnimation.js         # Slide & bounce animations
 │   │   │
 │   │   ├── utils/
-│   │   │   └── Stack.js                # Custom Stack implementation
+│   │   │   └── Stack.js                # Custom stack implementation
 │   │   │
 │   │   ├── App.js
 │   │   └── index.js
 │   │
-│   ├── package.json           # CRA config (proxy for local dev)
+│   ├── package.json            # CRA config (proxy → backend)
+│   └── node_modules/
+│
+├── server/                     ← Node.js / Express backend
+│   │
+│   ├── server.js               # POST /api/validate-url (DNS validation)
+│   ├── package.json
+│   └── node_modules/
+│
+└── README.md
+
+```
+
+---
+
+Perfect 👍
+Below is a **clean, final, viva-ready `README.md`** that reflects **everything we fixed and finalized in this chat** — CRA + Express (local), DNS-based validation, correct stack logic, canonical URL normalization, and real-browser behavior.
+
+You can **copy-paste this directly** as `README.md`.
+
+---
+
+# 🚀 NavStack – Browser History Simulator
+
+![NavStack Logo](https://drive.google.com/uc?export=view\&id=1A0_Gz5JQbTSwZ8_kw-RiZTHIoeHodNaZ)
+
+NavStack is an interactive **browser history simulator** built using **React** and **Node.js**, designed to demonstrate how real web browsers manage navigation history using **stack data structures** (LIFO – Last In, First Out).
+
+This project is **educational**, **visual**, and **browser-accurate**, including real-world URL validation and canonicalization.
+
+---
+
+## 🎯 Project Objectives
+
+* Demonstrate **stack data structure usage** in browser navigation
+* Simulate **Back / Forward** browser behavior
+* Validate **external URLs** realistically using DNS lookup
+* Prevent invalid or duplicate history entries
+* Provide a smooth, animated, user-friendly interface
+
+---
+
+## 🏗️ Final Architecture (Local Setup)
+
+```
+NavStack/
+│
+├── client/                     ← React (Create React App)
+│   │
+│   ├── public/
+│   ├── src/
+│   │   ├── components/
+│   │   │   ├── Browser.js              # Core browser simulator
+│   │   │   ├── Navigation.js           # Back / Forward controls
+│   │   │   ├── PageContent.js          # Page rendering
+│   │   │   └── StackVisualization.js   # Stack UI
+│   │   │
+│   │   ├── hooks/
+│   │   │   └── useAnimation.js         # Slide & bounce animations
+│   │   │
+│   │   ├── utils/
+│   │   │   └── Stack.js                # Custom stack implementation
+│   │   │
+│   │   ├── App.js
+│   │   └── index.js
+│   │
+│   ├── package.json            # CRA config (proxy → backend)
+│   └── node_modules/
+│
+├── server/                     ← Node.js / Express backend
+│   │
+│   ├── server.js               # POST /api/validate-url (DNS validation)
+│   ├── package.json
 │   └── node_modules/
 │
 └── README.md
@@ -59,14 +127,34 @@ NavStack/
 
 ---
 
-## 🔁 Runtime Request Flow (Production)
+## 🔄 Navigation Logic (How It Works)
+
+### New Navigation
 
 ```
-Browser.js (React)
-   ↓ fetch('/api/validate-url')
-Vercel Serverless Function
-   ↓
-External Website
+User enters URL
+→ URL normalization (case-insensitive)
+→ DNS validation (backend)
+→ If valid:
+   - current page → backStack
+   - forwardStack cleared
+   - new page set as current
+→ If invalid:
+   - navigation blocked
+```
+
+### Back Button
+
+```
+currentPage → forwardStack
+backStack.pop() → currentPage
+```
+
+### Forward Button
+
+```
+currentPage → backStack
+forwardStack.pop() → currentPage
 ```
 
 ---
@@ -87,7 +175,6 @@ External Website
 * Defined **browser-accurate navigation rules**
 * Implemented URL normalization, history checks, and UX states
 * Integrated animations and validation feedback
-* Migrated backend logic to **Vercel serverless API**
 
 ---
 
@@ -101,14 +188,8 @@ External Website
 
 ### 🛠️ **Sohail Khan & Ragini Kanojia** — Backend & Validation Logic
 
-* Designed URL validation semantics
-* Implemented `/api/validate-url`
-* Handled real-world edge cases:
-
-  * HTTP 403 / 404
-  * Bot-blocked websites
-  * DNS failures
-  * Timeouts
+* URL validation logic
+* Error handling & sanitization
 
 ---
 
@@ -217,60 +298,39 @@ NavStack **correctly allows navigation** in such cases.
 
 ---
 
-## 🚀 Getting Started (Local Development)
+## 🚀 Running the Project
 
-### 1️⃣ Clone Repository
+### 1️⃣ Start Backend
 
 ```bash
-git clone https://github.com/yourusername/navstack.git
-cd navstack
+cd server
+node server.js
 ```
 
-### 2️⃣ Install Dependencies
+Expected output:
+
+```
+✅ Backend running on http://localhost:5000
+```
+
+---
+
+### 2️⃣ Start Frontend
 
 ```bash
 cd client
-npm install
-```
-
-### 3️⃣ Start Frontend
-
-```bash
 npm start
 ```
 
-Frontend runs at:
+Runs at:
 
 ```
 http://localhost:3000
 ```
 
-> During local development, CRA proxies `/api/validate-url`.
+CRA automatically proxies API requests to the backend.
 
----
 
-## 🌍 Deployment (Vercel)
-
-* Frontend: **Create React App**
-* Backend: **Vercel Serverless Function**
-* No Express server required
-
-```bash
-vercel
-```
-
-✔ `/api/validate-url` automatically deployed
-✔ `/client/build` served as frontend
-
----
-
-## 🛠️ Technologies Used
-
-* **React (CRA)** – Frontend
-* **Vercel Serverless Functions** – Backend
-* **Custom Stack DS** – Core logic
-* **CSS Animations** – UI transitions
-* **JavaScript (ES6+)**
 
 ---
 
